@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+
+import requests
+import os
+import sys
+from pymongo import MongoClient
+
+def get_pic(http, pic_path, coll, is_cat=True):
+    '''
+    Функция скачивает картинку с указанным URL и добавляет запись в БД.
+    '''
+    r_pic = requests.get(http)
+    filename = http.split('/')[-1]
+    with open(pic_path + filename, 'wb') as f:
+        f.write(r_pic.content)
+    if is_cat:
+        coll.insert_one({'category': 'cat', 'path': pic_path + filename})
+    else:
+        coll.insert_one({'category': 'dog', 'path': pic_path + filename})
+
+#проверка формата вызова команды
+if len(sys.argv) != 2:
+    print('Usage: {} <amount_of_pics>'.format(sys.argv[0]))
+    sys.exit(1)
+
+#сбор списка синсетов с сайта, приведение в удобный для парсинга вид
+r = requests.get('http://image-net.org/archive/words.txt')
+synset_dict = r.text.split('\n')
+print('Synset list is downloaded!')
+
+#для более точного поиска выбраны домашние коты и собаки
+for i in synset_dict:
+    if 'domestic cat' in i:
+        cat_synset = i.split()[0]
+    if 'domestic dog' in i:
+        dog_synset = i.split()[0]
+
+#для найденных синсетов получаются списки ссылок
+r = requests.get('http://image-net.org/api/text/imagenet.synset.geturls?wnid=' + cat_synset)
+cat_dict = r.text.split('\r\n')
+print('Cats are almost ready!')
+r = requests.get('http://image-net.org/api/text/imagenet.synset.geturls?wnid=' + dog_synset)
+dog_dict = r.text.split('\r\n')
+print('Dogs are almost ready!')
+
+#создание папок
+if not (os.path.exists('data/train/cat')):
+    os.makedirs('data/train/cat')
+if not (os.path.exists('data/train/dog')):
+    os.makedirs('data/train/dog')
+if not (os.path.exists('data/test/cat')):
+    os.makedirs('data/test/cat')
+if not (os.path.exists('data/test/dog')):
+    os.makedirs('data/test/dog')
+
+#подсчет нужного количества изображений
+amount_train = round(int(sys.argv[1])*0.8)
+amount_test = int(sys.argv[1]) - amount_train
+
+#подключение к БД, самый простой вариант
+client = MongoClient('localhost', 27017)
+db = client.image_base
+coll = db.coll_cats_dogs
+
+#скачивание картинок, заполнение базы
+for i in range(amount_train):
+    get_pic(cat_dict[i], 'data/train/cat/', coll)
+    get_pic(dog_dict[i], 'data/train/dog/', coll, is_cat=False)
+for i in range(amount_train, amount_train + amount_test):
+    get_pic(cat_dict[i], 'data/test/cat/', coll)
+    get_pic(dog_dict[i], 'data/test/dog/', coll, is_cat=False)
+sys.exit(0)
