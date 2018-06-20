@@ -41,9 +41,13 @@ def collect(st_cat, st_dog):
             dog_synset = i.split()[0]
 
     #для найденных синсетов получаются списки ссылок
-    r = requests.get('http://image-net.org/api/text/imagenet.synset.geturls?wnid=' + do$
+    r = requests.get('http://image-net.org/api/text/imagenet.synset.geturls?wnid=' + cat_synset)
+    cat_dict = r.text.split('\r\n')
+    print('Cats are almost ready!')
+    r = requests.get('http://image-net.org/api/text/imagenet.synset.geturls?wnid=' + dog_synset)
     dog_dict = r.text.split('\r\n')
     print('Dogs are almost ready!')
+
 
     #создание папок
     if not (os.path.exists('data/train/cat')):
