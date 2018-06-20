@@ -20,7 +20,7 @@ def get_pic(http, pic_path, coll, is_cat=True):
 
 def collect(st_cat, st_dog):
     '''
-    collect() is the main function, it 
+    collect() is the main function, it takes the data from image-net.org
     '''
 
     #проверка формата вызова команды
